@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { normalizeUrl }   from '../utils/urlUtils';
-import { isLocalhostUrl } from '../utils/urlUtils';
+import { isLocalhostUrl, isLocalFileUrl } from '../utils/urlUtils';
 import { vscode }         from './api';
 import * as el            from './elements';
 import { state }          from './state';
@@ -41,11 +41,16 @@ el.frame.addEventListener('load', () => {
     if (state.proxyOrigin && detectedUrl.startsWith(state.proxyOrigin) && state.currentRealUrl) {
       try {
         const proxyU = new URL(detectedUrl);
-        const realU  = new URL(state.currentRealUrl);
-        detectedUrl  = realU.origin + proxyU.pathname + proxyU.search + proxyU.hash;
-
-        // Keep currentRealUrl in sync so subsequent navigations don't use a stale port
-        state.currentRealUrl = detectedUrl;
+        
+        if (state.currentRealUrl.startsWith('file://')) {
+          const decodedFsPath = decodeURIComponent(proxyU.pathname);
+          detectedUrl = `file://${decodedFsPath}${proxyU.search}${proxyU.hash}`;
+          state.currentRealUrl = detectedUrl;
+        } else {
+          const realU  = new URL(state.currentRealUrl);
+          detectedUrl  = realU.origin + proxyU.pathname + proxyU.search + proxyU.hash;
+          state.currentRealUrl = detectedUrl;
+        }
       } catch { detectedUrl = state.currentRealUrl; }
     }
     if (detectedUrl !== state.history[state.historyIdx]) { state.history[state.historyIdx] = detectedUrl; }
@@ -53,11 +58,11 @@ el.frame.addEventListener('load', () => {
   }
 
   // Detect blocked (X-Frame-Options / CSP) pages
-  if (!isCrossOrigin && !isLocalhostUrl(detectedUrl)) {
+  if (!isCrossOrigin && !isLocalhostUrl(detectedUrl) && !isLocalFileUrl(detectedUrl)) {
     try {
       if (!(el.frame.contentDocument?.body?.innerText?.trim())) { showBlockedBanner(detectedUrl); }
     } catch {}
-  } else if (isCrossOrigin && !isLocalhostUrl(state.history[state.historyIdx] || '')) {
+  } else if (isCrossOrigin && !isLocalhostUrl(state.history[state.historyIdx] || '') && !isLocalFileUrl(state.history[state.historyIdx] || '')) {
     setTimeout(() => {
       try { void el.frame.contentWindow?.location.href; el.crossBadge.classList.remove('visible'); }
       catch { showBlockedBanner(state.history[state.historyIdx] || ''); }

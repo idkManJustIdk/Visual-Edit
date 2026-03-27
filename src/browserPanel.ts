@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as http from 'http';
 import { DevProxy } from './devProxy';
 import { getPanelHtml } from './utils/panelHtml';
-import { isLocalhostUrl, HMR_EXTENSIONS } from './utils/urlUtils';
+import { isLocalhostUrl, isLocalFileUrl, HMR_EXTENSIONS } from './utils/urlUtils';
 import { handleConsole }                              from './utils/handlers/consoleHandler';
 import { handleNetworkRequest, handleNetworkResponse } from './utils/handlers/networkHandler';
 import { handleInspectElement }                        from './utils/handlers/inspectHandler';
@@ -120,7 +120,28 @@ export class BrowserPanel {
   private _navigateTo(url: string) {
     this._currentUrl = url;
 
-    if (BrowserPanel._proxy && isLocalhostUrl(url)) {
+    if (BrowserPanel._proxy && (isLocalhostUrl(url) || isLocalFileUrl(url))) {
+      if (isLocalFileUrl(url)) {
+        BrowserPanel._proxy!.setTarget(url);
+        try {
+          const u = vscode.Uri.parse(url);
+          let mapped = u.fsPath.replace(/\\/g, '/');
+          if (!mapped.startsWith('/')) { mapped = '/' + mapped; }
+          const encodedPath = mapped.split('/').map(encodeURIComponent).join('/');
+          const loadUrl = `http://localhost:${BrowserPanel._proxy!.port}${encodedPath}${u.query ? '?' + u.query : ''}${u.fragment ? '#' + u.fragment : ''}`;
+          
+          this._panel.webview.postMessage({
+            type: 'loadUrl',
+            url: loadUrl,
+            realUrl: url,
+            proxyOrigin: `http://localhost:${BrowserPanel._proxy!.port}`,
+          });
+        } catch {
+          this._panel.webview.postMessage({ type: 'showError', url });
+        }
+        return;
+      }
+
       // Ping before proxying so we can show the custom error page instead of
       // the proxy's raw "Proxy error:" text when the dev server isn't running.
       BrowserPanel._pingUrl(url).then(reachable => {
@@ -174,11 +195,19 @@ export class BrowserPanel {
     const proxy = BrowserPanel._proxy;
     let initialSrc = this._currentUrl;
 
-    if (proxy && isLocalhostUrl(this._currentUrl)) {
+    if (proxy && (isLocalhostUrl(this._currentUrl) || isLocalFileUrl(this._currentUrl))) {
       proxy.setTarget(this._currentUrl);
       try {
-        const u = new URL(this._currentUrl);
-        initialSrc = `http://localhost:${proxy.port}${u.pathname}${u.search}${u.hash}`;
+        if (isLocalFileUrl(this._currentUrl)) {
+          const u = vscode.Uri.parse(this._currentUrl);
+          let mapped = u.fsPath.replace(/\\/g, '/');
+          if (!mapped.startsWith('/')) { mapped = '/' + mapped; }
+          const encodedPath = mapped.split('/').map(encodeURIComponent).join('/');
+          initialSrc = `http://localhost:${proxy.port}${encodedPath}${u.query ? '?' + u.query : ''}${u.fragment ? '#' + u.fragment : ''}`;
+        } else {
+          const u = new URL(this._currentUrl);
+          initialSrc = `http://localhost:${proxy.port}${u.pathname}${u.search}${u.hash}`;
+        }
       } catch {}
     }
 

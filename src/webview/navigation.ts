@@ -1,4 +1,4 @@
-import { isLocalhostUrl } from '../utils/urlUtils';
+import { isLocalhostUrl, isLocalFileUrl } from '../utils/urlUtils';
 import { vscode }          from './api';
 import * as el             from './elements';
 import { state }           from './state';
@@ -41,9 +41,11 @@ export async function navigateTo(url: string) {
 
   if (!url || url === 'about:blank') { el.frame.src = 'about:blank'; return; }
 
-  if (isLocalhostUrl(url)) {
-    const reachable = await pingUrl(url);
-    if (!reachable) { pushHistory(url); showErrorPage(url); syncUI(url); return; }
+  if (isLocalhostUrl(url) || isLocalFileUrl(url)) {
+    if (isLocalhostUrl(url)) {
+      const reachable = await pingUrl(url);
+      if (!reachable) { pushHistory(url); showErrorPage(url); syncUI(url); return; }
+    }
     pushHistory(url);
     syncUI(url);
     startLoading();

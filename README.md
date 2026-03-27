@@ -20,6 +20,7 @@
 
 - 🌐 **Embedded Browser**: Open a full-featured web browser directly inside a VS Code webview panel.
 - ⚡ **HMR Aware Auto-Reload**: Automatically reloads the browser tab when a workspace file is saved. Skips full-page reloads for file types natively handled by Hot Module Replacement (Vite, Webpack, etc.), keeping your application state intact.
+- 📰 **Support for local static files**: Supports opening local static files in the browser tab, either by pressing on a file and selecting "Open in Browser Tab" from the context menu, or by entering the file path into the address bar.
 - 🔍 **Inspect Elements**: Native integration allowing you to click an element in the browser panel and jump straight to its source code in your editor.
 - 🛠 **Integrated DevTools (Console & Network)**: View `console.log` and `fetch`/`XHR` network requests in VS Code without opening an external browser's DevTools.
   - *How to use*: Press `Ctrl+Shift+U` (or `Cmd+Shift+U` on macOS) to open the Output panel, then select **"Browser Tab — Console"** or **"Browser Tab — Network"** from the dropdown menu.

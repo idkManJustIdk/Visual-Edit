@@ -30,6 +30,15 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   );
 
+  // ── Command: Open File in Browser Tab ──────────────────────────────────────
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-browser-tab.openFile", (uri: vscode.Uri) => {
+      if (uri) {
+        BrowserPanel.createOrShow(context, uri.toString());
+      }
+    }),
+  );
+
   // ── Command: Navigate to URL ───────────────────────────────────────────────
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-browser-tab.navigate", async () => {

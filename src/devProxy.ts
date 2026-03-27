@@ -1,10 +1,15 @@
 import * as http from 'http';
 import * as net from 'net';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as mime from 'mime-types';
 import { INJECT_TAG } from './utils/devtools';
 
 export class DevProxy {
   private readonly _server: http.Server;
   public readonly port: number;
+  private _targetIsFile = false;
+  private _baseDirectory = '';
   private _targetHost = 'localhost';
   private _targetPort = 3000;
 
@@ -24,8 +29,22 @@ export class DevProxy {
     return proxy;
   }
 
-  /** Switch the proxy target to a different localhost dev server. */
+  /** Switch the proxy target to a different localhost dev server or local file. */
   setTarget(targetUrl: string) {
+    if (targetUrl.startsWith('file://')) {
+      this._targetIsFile = true;
+      try {
+        const u = new URL(targetUrl);
+        let p = decodeURIComponent(u.pathname);
+        if (process.platform === 'win32' && p.startsWith('/') && p.length > 2 && p[2] === ':') {
+          p = p.substring(1);
+        }
+        this._baseDirectory = path.dirname(p);
+      } catch { }
+      return;
+    }
+
+    this._targetIsFile = false;
     try {
       const u = new URL(targetUrl);
       this._targetHost = u.hostname;
@@ -48,6 +67,52 @@ export class DevProxy {
           reqPath = u.pathname + u.search;
         } catch { }
       }
+
+      if (this._targetIsFile) {
+        let p = decodeURIComponent(reqPath.split('?')[0]);
+        let fullPath = p;
+        if (process.platform === 'win32' && p.startsWith('/') && p[2] === ':') {
+          fullPath = p.substring(1);
+        }
+
+        if (!path.isAbsolute(fullPath) || !fs.existsSync(fullPath)) {
+          fullPath = path.join(this._baseDirectory, p);
+        }
+
+        if (!fs.existsSync(fullPath)) {
+          res.writeHead(404);
+          res.end('Not Found');
+          return;
+        }
+
+        const stat = fs.statSync(fullPath);
+        if (stat.isDirectory()) {
+          fullPath = path.join(fullPath, 'index.html');
+          if (!fs.existsSync(fullPath)) {
+            res.writeHead(403);
+            res.end('Directory listing forbidden');
+            return;
+          }
+        }
+
+        const contentType = mime.lookup(fullPath) || 'application/octet-stream';
+        if (contentType === 'text/html') {
+          let body = fs.readFileSync(fullPath, 'utf8');
+          body = body.includes('</head>')
+            ? body.replace('</head>', INJECT_TAG + '</head>')
+            : INJECT_TAG + body;
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(body);
+        } else {
+          res.writeHead(200, {
+            'Content-Type': contentType,
+            'Content-Length': fs.statSync(fullPath).size
+          });
+          fs.createReadStream(fullPath).pipe(res);
+        }
+        return;
+      }
+
       const headers = { ...req.headers, host: `${this._targetHost}:${this._targetPort}` };
       delete headers['accept-encoding'];
 
@@ -94,6 +159,10 @@ export class DevProxy {
 
     // WebSocket proxy — required for HMR (Vite, webpack, etc.)
     server.on('upgrade', (req, socket, _head) => {
+      if (this._targetIsFile) {
+        socket.destroy();
+        return;
+      }
       const opts: http.RequestOptions = {
         host: this._targetHost,
         port: this._targetPort,
