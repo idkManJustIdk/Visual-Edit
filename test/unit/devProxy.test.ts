@@ -1,5 +1,8 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as http from 'http';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { DevProxy } from '../../src/devProxy';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -127,5 +130,67 @@ describe('DevProxy', () => {
     proxy.setTarget(`http://${LOCALHOST_IP}:${p2}`);
     const body2 = await getThrough(proxy.port);
     expect(body2).toContain('server2');
+  });
+
+  describe('File Serving Mode', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bt-test-'));
+      fs.writeFileSync(path.join(tmpDir, 'index.html'), '<html><head></head><body>local</body></html>');
+      fs.writeFileSync(path.join(tmpDir, 'style.css'), 'body { color: red; }');
+      fs.mkdirSync(path.join(tmpDir, 'sub'));
+      fs.writeFileSync(path.join(tmpDir, 'sub', 'page.html'), '<html><head></head><body>sub</body></html>');
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('serves a local HTML file and injects devtools', async () => {
+      const proxy = await DevProxy.create();
+      proxies.push(proxy);
+
+      let mapped = path.join(tmpDir, 'index.html').replace(/\\/g, '/');
+      if (!mapped.startsWith('/')) { mapped = '/' + mapped; }
+      proxy.setTarget(`file://${mapped}`);
+
+      const encodedPath = mapped.split('/').map(encodeURIComponent).join('/');
+      const body = await getResponse(proxy.port, encodedPath);
+
+      expect(body.status).toBe(200);
+      expect(body.body).toContain('data-bt-devtools="1"');
+      expect(body.body).toContain('local');
+    });
+
+    it('serves relative assets from the same directory', async () => {
+      const proxy = await DevProxy.create();
+      proxies.push(proxy);
+
+      let mapped = path.join(tmpDir, 'index.html').replace(/\\/g, '/');
+      if (!mapped.startsWith('/')) { mapped = '/' + mapped; }
+      proxy.setTarget(`file://${mapped}`);
+
+      const res = await getResponse(proxy.port, '/style.css');
+      expect(res.status).toBe(200);
+      expect(res.body).toBe('body { color: red; }');
+
+      const resSub = await getResponse(proxy.port, '/sub/page.html');
+      expect(resSub.status).toBe(200);
+      expect(resSub.body).toContain('sub');
+      expect(resSub.body).toContain('data-bt-devtools="1"');
+    });
+
+    it('returns 404 for missing files', async () => {
+      const proxy = await DevProxy.create();
+      proxies.push(proxy);
+
+      let mapped = path.join(tmpDir, 'index.html').replace(/\\/g, '/');
+      if (!mapped.startsWith('/')) { mapped = '/' + mapped; }
+      proxy.setTarget(`file://${mapped}`);
+
+      const { status } = await getResponse(proxy.port, '/missing.css');
+      expect(status).toBe(404);
+    });
   });
 });

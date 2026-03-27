@@ -39,12 +39,25 @@
         "title": "Open URL in Browser Tab",
         "category": "Browser Tab",
         "icon": "$(search)"
+      },
+      {
+        "command": "vscode-browser-tab.openFile",
+        "title": "Open in Browser Tab",
+        "category": "Browser Tab",
+        "icon": "$(globe)"
       }
     ],
     "menus": {
       "editor/title": [
         {
           "command": "vscode-browser-tab.open",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "vscode-browser-tab.openFile",
+          "when": "resourceExtname == .html",
           "group": "navigation"
         }
       ]
@@ -120,6 +133,7 @@
     "release": "standard-version"
   },
   "devDependencies": {
+    "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
@@ -130,5 +144,8 @@
     "standard-version": "^9.5.0",
     "typescript": "^5.3.0",
     "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "mime-types": "^3.0.2"
   }
 }

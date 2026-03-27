@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeUrl, isLocalhostUrl, HMR_EXTENSIONS } from '../../src/utils/urlUtils';
+import { normalizeUrl, isLocalhostUrl, isLocalFileUrl, HMR_EXTENSIONS } from '../../src/utils/urlUtils';
 
 // ── normalizeUrl ─────────────────────────────────────────────────────────────
 
@@ -30,6 +30,32 @@ describe('normalizeUrl', () => {
 
   it('trims surrounding whitespace before normalising', () => {
     expect(normalizeUrl('  localhost:4200  ')).toBe('http://localhost:4200');
+  });
+
+  it('converts absolute Windows path to file:// URI', () => {
+    expect(normalizeUrl('C:\\foo\\bar.html')).toBe('file:///C:/foo/bar.html');
+  });
+
+  it('converts absolute Unix path to file:// URI', () => {
+    expect(normalizeUrl('/usr/local/foo/bar.html')).toBe('file:///usr/local/foo/bar.html');
+  });
+});
+
+// ── isLocalFileUrl ───────────────────────────────────────────────────────────
+
+describe('isLocalFileUrl', () => {
+  it('returns true for file:// paths', () => {
+    expect(isLocalFileUrl('file:///C:/foo/bar.html')).toBe(true);
+    expect(isLocalFileUrl('file:///usr/local/foo')).toBe(true);
+  });
+
+  it('is case-insensitive for the protocol', () => {
+    expect(isLocalFileUrl('FILE:///C:/foo')).toBe(true);
+  });
+
+  it('returns false for other protocols', () => {
+    expect(isLocalFileUrl('http://localhost:3000')).toBe(false);
+    expect(isLocalFileUrl('https://example.com')).toBe(false);
   });
 });
 

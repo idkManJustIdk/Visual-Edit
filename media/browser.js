@@ -9,10 +9,20 @@
       return false;
     }
   }
+  function isLocalFileUrl(url) {
+    return url.toLowerCase().startsWith("file://");
+  }
   function normalizeUrl(url) {
     url = url.trim();
     if (!url) {
       return "about:blank";
+    }
+    if (/^(?:[a-zA-Z]:[\\/]|\/)/.test(url)) {
+      let mapped = url.replace(/\\/g, "/");
+      if (!mapped.startsWith("/")) {
+        mapped = "/" + mapped;
+      }
+      return `file://${mapped}`;
     }
     if (!/^[a-z][a-z\d+\-.]*:\/\//i.test(url)) {
       url = "http://" + url;
@@ -56,16 +66,14 @@
 
   // src/webview/state.ts
   var state = {
-    /** Browser history stack (real/display URLs, not proxy URLs). */
     history: [frame.src || "about:blank"],
     historyIdx: 0,
     autoReloadEnabled: true,
     inspectEnabled: false,
     loadTimeout: null,
-    /** Origin of the DevTools proxy e.g. 'http://localhost:56108'. Empty when unproxied. */
     proxyOrigin: "",
-    /** The real (user-visible) URL when the iframe is loading through the proxy. */
-    currentRealUrl: ""
+    currentRealUrl: "",
+    currentProxyUrl: ""
   };
 
   // src/webview/ui.ts
@@ -174,13 +182,15 @@
       frame.src = "about:blank";
       return;
     }
-    if (isLocalhostUrl(url)) {
-      const reachable = await pingUrl(url);
-      if (!reachable) {
-        pushHistory(url);
-        showErrorPage(url);
-        syncUI(url);
-        return;
+    if (isLocalhostUrl(url) || isLocalFileUrl(url)) {
+      if (isLocalhostUrl(url)) {
+        const reachable = await pingUrl(url);
+        if (!reachable) {
+          pushHistory(url);
+          showErrorPage(url);
+          syncUI(url);
+          return;
+        }
       }
       pushHistory(url);
       syncUI(url);
@@ -199,11 +209,9 @@
     }
     state.historyIdx--;
     const url = state.history[state.historyIdx];
-    hideErrorPage();
-    hideBlockedBanner();
-    startLoading();
-    frame.src = url;
-    syncUI(url);
+    state.history = state.history.slice(0, state.historyIdx);
+    state.historyIdx = state.history.length - 1;
+    navigateTo(url);
   }
   function goForward() {
     if (state.historyIdx >= state.history.length - 1) {
@@ -211,25 +219,14 @@
     }
     state.historyIdx++;
     const url = state.history[state.historyIdx];
-    hideErrorPage();
-    hideBlockedBanner();
-    startLoading();
-    frame.src = url;
-    syncUI(url);
+    state.history = state.history.slice(0, state.historyIdx);
+    state.historyIdx = state.history.length - 1;
+    navigateTo(url);
   }
   function refresh() {
     hideErrorPage();
     hideBlockedBanner();
-    try {
-      frame.contentWindow?.location.reload();
-    } catch {
-      const cur = frame.src;
-      frame.src = "";
-      requestAnimationFrame(() => {
-        frame.src = cur;
-      });
-    }
-    startLoading();
+    navigateTo(state.history[state.historyIdx] || "");
   }
 
   // src/webview/device.ts
@@ -258,23 +255,40 @@
 
   // src/webview/browser.ts
   frame.addEventListener("load", () => {
-    stopLoading();
     let detectedUrl = "";
     let isCrossOrigin = false;
     try {
       detectedUrl = frame.contentWindow?.location.href || "";
+      if (detectedUrl === "about:blank")
+        return;
       crossBadge.classList.remove("visible");
     } catch {
-      detectedUrl = state.history[state.historyIdx] || frame.src;
+      detectedUrl = state.currentRealUrl || state.history[state.historyIdx] || frame.src;
       isCrossOrigin = true;
       crossBadge.classList.add("visible");
     }
+    stopLoading();
     if (detectedUrl && detectedUrl !== "about:blank") {
+      if (detectedUrl.includes("_bt_r=")) {
+        try {
+          const u = new URL(detectedUrl);
+          u.searchParams.delete("_bt_r");
+          detectedUrl = u.toString();
+        } catch {
+        }
+      }
       if (state.proxyOrigin && detectedUrl.startsWith(state.proxyOrigin) && state.currentRealUrl) {
         try {
           const proxyU = new URL(detectedUrl);
-          const realU = new URL(state.currentRealUrl);
-          detectedUrl = realU.origin + proxyU.pathname + proxyU.search + proxyU.hash;
+          if (state.currentRealUrl.startsWith("file://")) {
+            const decodedFsPath = decodeURIComponent(proxyU.pathname);
+            detectedUrl = `file://${decodedFsPath}${proxyU.search}${proxyU.hash}`;
+            state.currentRealUrl = detectedUrl;
+          } else {
+            const realU = new URL(state.currentRealUrl);
+            detectedUrl = realU.origin + proxyU.pathname + proxyU.search + proxyU.hash;
+            state.currentRealUrl = detectedUrl;
+          }
         } catch {
           detectedUrl = state.currentRealUrl;
         }
@@ -284,14 +298,14 @@
       }
       syncUI(detectedUrl);
     }
-    if (!isCrossOrigin && !isLocalhostUrl(detectedUrl)) {
+    if (!isCrossOrigin && !isLocalhostUrl(detectedUrl) && !isLocalFileUrl(detectedUrl)) {
       try {
         if (!frame.contentDocument?.body?.innerText?.trim()) {
           showBlockedBanner(detectedUrl);
         }
       } catch {
       }
-    } else if (isCrossOrigin && !isLocalhostUrl(state.history[state.historyIdx] || "")) {
+    } else if (isCrossOrigin && !isLocalhostUrl(state.history[state.historyIdx] || "") && !isLocalFileUrl(state.history[state.historyIdx] || "")) {
       setTimeout(() => {
         try {
           void frame.contentWindow?.location.href;
@@ -325,6 +339,18 @@
           syncUI(msg.realUrl);
         }
         frame.src = msg.url;
+      }
+    },
+    showError: (msg) => {
+      if (msg.url) {
+        const url = msg.url;
+        if (state.history[state.historyIdx] !== url) {
+          state.history = state.history.slice(0, state.historyIdx + 1);
+          state.history.push(url);
+          state.historyIdx = state.history.length - 1;
+        }
+        syncUI(url);
+        showErrorPage(url);
       }
     },
     reload: () => {
