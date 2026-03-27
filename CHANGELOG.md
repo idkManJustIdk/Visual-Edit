@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.3](https://github.com/AdiHaAgadi/vscode-browser-tab/compare/v0.1.2...v0.1.3) (2026-03-27)
+
+
+### Features
+
+* allow opening static local files, such as HTML files, in the browser tab ([321967e](https://github.com/AdiHaAgadi/vscode-browser-tab/commit/321967e5a88ca0751a764693bca6cc3b530dcc07))
+
 ### [0.1.2](https://github.com/AdiHaAgadi/vscode-browser-tab/compare/v0.1.1...v0.1.2) (2026-03-03)
 
 
