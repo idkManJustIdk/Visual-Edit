@@ -69,8 +69,8 @@ el.frame.addEventListener('load', () => {
     }, 800);
   }
 
-  let title = 'Browser';
-  try { title = el.frame.contentDocument?.title || 'Browser'; } catch {}
+  let title = 'Visual Edit';
+  try { title = el.frame.contentDocument?.title || 'Visual Edit'; } catch {}
   vscode.postMessage({ type: 'navigate', url: detectedUrl || state.history[state.historyIdx], title });
 
   // Re-enable inspect mode after navigation (the injected script restarts on each page load)

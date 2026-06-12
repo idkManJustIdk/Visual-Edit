@@ -9,7 +9,7 @@ import { handleInspectElement }                        from './utils/handlers/in
 
 export class BrowserPanel {
   public static currentPanel: BrowserPanel | undefined;
-  private static readonly _viewType = 'vscodeBrowserTab';
+  private static readonly _viewType = 'vscodeVisualEdit';
 
   // Shared channels and proxy — set once during activation via init()
   private static _consoleChannel: vscode.LogOutputChannel | undefined;
@@ -44,7 +44,7 @@ export class BrowserPanel {
       return;
     }
 
-    const config = vscode.workspace.getConfiguration('vscode-browser-tab');
+    const config = vscode.workspace.getConfiguration('vscode-visual-edit');
     const defaultUrl = url ?? config.get<string>('defaultUrl', 'http://localhost:3000');
 
     // Always map common dev ports plus the current proxy port
@@ -57,7 +57,7 @@ export class BrowserPanel {
 
     const panel = vscode.window.createWebviewPanel(
       BrowserPanel._viewType,
-      'Browser',
+      'Visual Edit',
       column,
       {
         enableScripts: true,
@@ -82,7 +82,7 @@ export class BrowserPanel {
     this._panel.webview.onDidReceiveMessage(msg => this._onMessage(msg), null, this._disposables);
 
     vscode.workspace.onDidSaveTextDocument(doc => {
-      const cfg = vscode.workspace.getConfiguration('vscode-browser-tab');
+      const cfg = vscode.workspace.getConfiguration('vscode-visual-edit');
       if (!cfg.get<boolean>('autoReload', true)) { return; }
       const ext = doc.fileName.slice(doc.fileName.lastIndexOf('.')).toLowerCase();
       if (cfg.get<boolean>('hmrAware', true) && HMR_EXTENSIONS.has(ext)) { return; }

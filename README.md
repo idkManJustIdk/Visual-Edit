@@ -1,17 +1,17 @@
-# Browser Tab
+# Visual Edit
 
 <p align="center">
-  <img src="media/icon.png" width="128" alt="Browser Tab Icon" />
+  <img src="media/icon.png" width="128" alt="Visual Edit Icon" />
 </p>
 
 <p align="center">
-  <strong>An embedded browser panel right inside VS Code. Stop switching windows and start previewing your workspace instantly!</strong>
+  <strong>An embedded browser panel right inside VS Code and Antigravity. Stop switching windows and start previewing your workspace instantly!</strong>
 </p>
 
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=AdiEfrat.vscode-browser-tab"><img src="https://img.shields.io/visual-studio-marketplace/v/AdiEfrat.vscode-browser-tab?color=e05d44&label=version" alt="VS Marketplace Version"></a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=AdiEfrat.vscode-browser-tab"><img src="https://img.shields.io/visual-studio-marketplace/i/AdiEfrat.vscode-browser-tab?color=fe7d37&label=installs" alt="VS Marketplace Installs"></a>
-  <a href="https://github.com/AdiHaAgadi/vscode-browser-tab/actions/workflows/ci.yml"><img src="https://github.com/AdiHaAgadi/vscode-browser-tab/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=Mordi.vscode-visual-edit"><img src="https://img.shields.io/visual-studio-marketplace/v/Mordi.vscode-visual-edit?color=e05d44&label=version" alt="VS Marketplace Version"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=Mordi.vscode-visual-edit"><img src="https://img.shields.io/visual-studio-marketplace/i/Mordi.vscode-visual-edit?color=fe7d37&label=installs" alt="VS Marketplace Installs"></a>
+  <a href="https://github.com/idkManJustIdk/Visual-Edit/actions/workflows/ci.yml"><img src="https://github.com/idkManJustIdk/Visual-Edit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/coverage-91%25-4c1.svg" alt="Test Coverage">
   <img src="https://img.shields.io/badge/license-MIT-blueviolet.svg" alt="License">
 </p>
@@ -19,12 +19,12 @@
 ## ✨ Key Features
 
 - 🌐 **Embedded Browser**: Open a full-featured web browser directly inside a VS Code webview panel.
-- ⚡ **HMR Aware Auto-Reload**: Automatically reloads the browser tab when a workspace file is saved. Skips full-page reloads for file types natively handled by Hot Module Replacement (Vite, Webpack, etc.), keeping your application state intact.
-- 📰 **Support for local static files**: Supports opening local static files in the browser tab, either by pressing on a file and selecting "Open in Browser Tab" from the context menu, or by entering the file path into the address bar.
+- ⚡ **HMR Aware Auto-Reload**: Automatically reloads the panel when a workspace file is saved. Skips full-page reloads for file types natively handled by Hot Module Replacement (Vite, Webpack, etc.), keeping your application state intact.
+- 📰 **Support for local static files**: Supports opening local static files, either by pressing on a file and selecting "Open in Visual Edit" from the context menu, or by entering the file path into the address bar.
 - 🔍 **Inspect Elements**: Native integration allowing you to click an element in the browser panel and jump straight to its source code in your editor.
 - 🛠 **Integrated DevTools (Console & Network)**: View `console.log` and `fetch`/`XHR` network requests in VS Code without opening an external browser's DevTools.
-  - *How to use*: Press `Ctrl+Shift+U` (or `Cmd+Shift+U` on macOS) to open the Output panel, then select **"Browser Tab — Console"** or **"Browser Tab — Network"** from the dropdown menu.
-- 🔗 **Terminal Link Interception**: Clicking a `localhost` URL in your VS Code terminal automatically opens it in the Browser Tab instead of your system browser.
+  - *How to use*: Press `Ctrl+Shift+U` (or `Cmd+Shift+U` on macOS) to open the Output panel, then select **"Visual Edit — Console"** or **"Visual Edit — Network"** from the dropdown menu.
+- 🔗 **Terminal Link Interception**: Clicking a `localhost` URL in your VS Code terminal automatically opens it in the Visual Edit panel instead of your system browser.
 
 ---
 
@@ -34,8 +34,8 @@ Access these via the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 
 | Command Title | ID | Default Keybinding |
 | :--- | :--- | :--- |
-| **Open Browser Tab** | `vscode-browser-tab.open` | `Ctrl+Shift+B` / `Cmd+Shift+B` |
-| **Open URL in Browser Tab** | `vscode-browser-tab.navigate` | `Ctrl+Shift+L` / `Cmd+Shift+L` |
+| **Open Visual Edit** | `vscode-visual-edit.open` | `Ctrl+Shift+B` / `Cmd+Shift+B` |
+| **Open URL in Visual Edit** | `vscode-visual-edit.navigate` | `Ctrl+Shift+L` / `Cmd+Shift+L` |
 
 ---
 
@@ -45,12 +45,12 @@ Customize the extension's behavior through `settings.json` or the VS Code Settin
 
 | Setting Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `vscode-browser-tab.defaultUrl` | `string` | `http://localhost:3000` | The default URL opened when the browser tab is launched. |
-| `vscode-browser-tab.autoReload` | `boolean` | `true` | Reloads the browser when a workspace file is saved. |
-| `vscode-browser-tab.hmrAware` | `boolean` | `true` | Skips auto-reload for `.js, .ts, .css, .vue, .svelte` files so HMR can handle them. |
-| `vscode-browser-tab.consoleOutput` | `string` | `"all"` | Minimum log level to mirror to the output channel (`all`, `warn`, `error`, `none`). |
-| `vscode-browser-tab.networkInspector` | `boolean` | `true` | Log `fetch` and `XHR` requests from the active page to the Network output channel. |
-| `vscode-browser-tab.terminalLinks` | `boolean` | `true` | If enabled, terminal URLs open in the extension instead of the system browser. |
+| `vscode-visual-edit.defaultUrl` | `string` | `http://localhost:3000` | The default URL opened when Visual Edit is launched. |
+| `vscode-visual-edit.autoReload` | `boolean` | `true` | Reloads the browser when a workspace file is saved. |
+| `vscode-visual-edit.hmrAware` | `boolean` | `true` | Skips auto-reload for `.js, .ts, .css, .vue, .svelte` files so HMR can handle them. |
+| `vscode-visual-edit.consoleOutput` | `string` | `"all"` | Minimum log level to mirror to the output channel (`all`, `warn`, `error`, `none`). |
+| `vscode-visual-edit.networkInspector` | `boolean` | `true` | Log `fetch` and `XHR` requests from the active page to the Network output channel. |
+| `vscode-visual-edit.terminalLinks` | `boolean` | `true` | If enabled, terminal URLs open in the extension instead of the system browser. |
 
 ---
 
@@ -66,7 +66,7 @@ This extension is built with robust isolation to ensure your host machine remain
 
 ## 🧪 Testing & Reliability
 
-Browser Tab is built for enterprise reliability:
+Visual Edit is built for enterprise reliability:
 
 - **Continuous Integration**: 100% automated testing pipeline running on GitHub Actions across **Ubuntu Linux, macOS, and Windows**.
 - **Coverage**: Maintains **>90% code coverage** through a combination of fast `vitest` unit tests and rigorous `Mocha`/Electron integration tests running inside a real VS Code extension host.
@@ -76,3 +76,11 @@ Browser Tab is built for enterprise reliability:
 ## Release Notes
 
 For a full history of changes, see the [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+## Credits
+
+Original extension by [AdiHaAgadi](https://github.com/AdiHaAgadi/vscode-browser-tab).
+
+**Inspect-to-Chat for Antigravity** — click an element in the browser preview to send its full context (selector, computed styles, DOM context, source location, and more) straight into the Antigravity agent chat — added by **Mordi**.

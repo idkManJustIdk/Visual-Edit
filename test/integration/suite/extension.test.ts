@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 
 // The extension ID must match package.json "publisher.name"
-const EXT_ID = 'AdiEfrat.vscode-browser-tab';
+const EXT_ID = 'Mordi.vscode-visual-edit';
 
 suite('Extension — activate()', () => {
   let ext: vscode.Extension<any>;
@@ -16,22 +16,22 @@ suite('Extension — activate()', () => {
     assert.ok(ext.isActive, 'extension should be active after activate()');
   });
 
-  test('"Browser Tab — Console" output channel is created', () => {
+  test('"Visual Edit — Console" output channel is created', () => {
     // Channels are registered as subscriptions; we verify the command side-effect
     // by checking the extension is active (channel creation failure would throw)
     assert.ok(ext.isActive);
   });
 
-  test('"vscode-browser-tab.open" command is registered', async () => {
+  test('"vscode-visual-edit.open" command is registered', async () => {
     const all = await vscode.commands.getCommands(true);
-    assert.ok(all.includes('vscode-browser-tab.open'),
-      'expected vscode-browser-tab.open to be registered');
+    assert.ok(all.includes('vscode-visual-edit.open'),
+      'expected vscode-visual-edit.open to be registered');
   });
 
-  test('"vscode-browser-tab.navigate" command is registered', async () => {
+  test('"vscode-visual-edit.navigate" command is registered', async () => {
     const all = await vscode.commands.getCommands(true);
-    assert.ok(all.includes('vscode-browser-tab.navigate'),
-      'expected vscode-browser-tab.navigate to be registered');
+    assert.ok(all.includes('vscode-visual-edit.navigate'),
+      'expected vscode-visual-edit.navigate to be registered');
   });
 });
 
@@ -57,7 +57,7 @@ suite('Extension — terminal link provider', () => {
     const links: Array<{ startIndex: number; length: number; tooltip: string }> = [];
     let m: RegExpExecArray | null;
     while ((m = URL_REGEX.exec(line)) !== null) {
-      links.push({ startIndex: m.index, length: m[0].length, tooltip: 'Open in Browser Tab' });
+      links.push({ startIndex: m.index, length: m[0].length, tooltip: 'Open in Visual Edit' });
     }
     assert.strictEqual(links.length, 1);
     assert.strictEqual(links[0].length, 'http://localhost:5173/'.length);
@@ -84,7 +84,7 @@ suite('Extension — terminal link provider', () => {
   test('terminalLinks setting=false: provider returns empty array', () => {
     // We test the guard logic directly rather than through VS Code's provider
     // registration, which isn't externally inspectable
-    const cfg = vscode.workspace.getConfiguration('vscode-browser-tab');
+    const cfg = vscode.workspace.getConfiguration('vscode-visual-edit');
     const enabled = cfg.get<boolean>('terminalLinks', true);
     // Default is true; disabling would require workspace config override in CI
     // so we just assert the setting is readable

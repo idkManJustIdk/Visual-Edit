@@ -1,12 +1,15 @@
 {
-  "name": "vscode-browser-tab",
-  "displayName": "Browser Tab",
-  "description": "Embedded browser panel inside VS Code.",
-  "version": "0.1.3",
-  "publisher": "AdiEfrat",
+  "name": "vscode-visual-edit",
+  "displayName": "Visual Edit",
+  "description": "an embedded browser panel inside VS Code and antigravity. with an ability so select elements from the browser and sending them to the antigravity chat.",
+  "version": "1.0.0",
+  "publisher": "Mordi",
+  "contributors": [
+    "Mordi (Antigravity inspect-to-chat integration)"
+  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/AdiHaAgadi/vscode-browser-tab"
+    "url": "https://github.com/idkManJustIdk/Visual-Edit"
   },
   "icon": "media/icon.png",
   "engines": {
@@ -29,34 +32,34 @@
   "contributes": {
     "commands": [
       {
-        "command": "vscode-browser-tab.open",
-        "title": "Open Browser Tab",
-        "category": "Browser Tab",
+        "command": "vscode-visual-edit.open",
+        "title": "Open Visual Edit",
+        "category": "Visual Edit",
         "icon": "$(globe)"
       },
       {
-        "command": "vscode-browser-tab.navigate",
-        "title": "Open URL in Browser Tab",
-        "category": "Browser Tab",
+        "command": "vscode-visual-edit.navigate",
+        "title": "Open URL in Visual Edit",
+        "category": "Visual Edit",
         "icon": "$(search)"
       },
       {
-        "command": "vscode-browser-tab.openFile",
-        "title": "Open in Browser Tab",
-        "category": "Browser Tab",
+        "command": "vscode-visual-edit.openFile",
+        "title": "Open in Visual Edit",
+        "category": "Visual Edit",
         "icon": "$(globe)"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "vscode-browser-tab.open",
+          "command": "vscode-visual-edit.open",
           "group": "navigation"
         }
       ],
       "explorer/context": [
         {
-          "command": "vscode-browser-tab.openFile",
+          "command": "vscode-visual-edit.openFile",
           "when": "resourceExtname == .html",
           "group": "navigation"
         }
@@ -64,35 +67,35 @@
     },
     "keybindings": [
       {
-        "command": "vscode-browser-tab.open",
+        "command": "vscode-visual-edit.open",
         "key": "ctrl+shift+b",
         "mac": "cmd+shift+b"
       },
       {
-        "command": "vscode-browser-tab.navigate",
+        "command": "vscode-visual-edit.navigate",
         "key": "ctrl+shift+l",
         "mac": "cmd+shift+l"
       }
     ],
     "configuration": {
-      "title": "Browser Tab",
+      "title": "Visual Edit",
       "properties": {
-        "vscode-browser-tab.defaultUrl": {
+        "vscode-visual-edit.defaultUrl": {
           "type": "string",
           "default": "http://localhost:3000",
-          "description": "Default URL to open when the browser tab is launched."
+          "description": "Default URL to open when Visual Edit is launched."
         },
-        "vscode-browser-tab.autoReload": {
+        "vscode-visual-edit.autoReload": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically reload the browser tab when a workspace file is saved."
+          "description": "Automatically reload the panel when a workspace file is saved."
         },
-        "vscode-browser-tab.hmrAware": {
+        "vscode-visual-edit.hmrAware": {
           "type": "boolean",
           "default": true,
           "description": "Skip full-page auto-reload for file types handled by HMR tools (Vite, webpack, etc.). JS, TS, CSS, Vue, Svelte files will not trigger a reload — HMR handles those live."
         },
-        "vscode-browser-tab.consoleOutput": {
+        "vscode-visual-edit.consoleOutput": {
           "type": "string",
           "enum": [
             "all",
@@ -107,17 +110,17 @@
             "Disable console mirroring"
           ],
           "default": "all",
-          "description": "Minimum log level to mirror from the active localhost page to the 'Browser Tab — Console' Output Channel."
+          "description": "Minimum log level to mirror from the active localhost page to the 'Visual Edit — Console' Output Channel."
         },
-        "vscode-browser-tab.networkInspector": {
+        "vscode-visual-edit.networkInspector": {
           "type": "boolean",
           "default": true,
-          "description": "Log fetch and XHR requests from the active localhost page to the 'Browser Tab — Network' Output Channel."
+          "description": "Log fetch and XHR requests from the active localhost page to the 'Visual Edit — Network' Output Channel."
         },
-        "vscode-browser-tab.terminalLinks": {
+        "vscode-visual-edit.terminalLinks": {
           "type": "boolean",
           "default": true,
-          "description": "When enabled, clicking a URL in the terminal opens it in the Browser Tab. When disabled, URLs open in the system browser instead."
+          "description": "When enabled, clicking a URL in the terminal opens it in the Visual Edit. When disabled, URLs open in the system browser instead."
         }
       }
     }

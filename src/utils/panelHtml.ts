@@ -8,7 +8,7 @@ function getNonce(): string {
 }
 
 /**
- * Builds the full HTML document for the Browser Tab webview panel.
+ * Builds the full HTML document for the Visual Edit webview panel.
  * @param webview  The VS Code Webview instance (used for URI generation and CSP).
  * @param extensionUri  The extension's root URI (for resolving media assets).
  * @param initialSrc  The URL to load in the iframe on first render (may be a proxy URL).
@@ -36,7 +36,7 @@ export function getPanelHtml(
              img-src * data:;
              connect-src *;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Browser Tab</title>
+  <title>Visual Edit</title>
   <link rel="stylesheet" href="${cssUri}" />
 </head>
 <body>

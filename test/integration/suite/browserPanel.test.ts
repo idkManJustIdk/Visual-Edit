@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { BrowserPanel } from '../../../src/browserPanel';
 
-const EXT_ID = 'AdiEfrat.vscode-browser-tab';
+const EXT_ID = 'Mordi.vscode-visual-edit';
 
 suite('BrowserPanel — lifecycle', () => {
   let context: vscode.ExtensionContext;
@@ -66,29 +66,29 @@ suite('BrowserPanel — settings integration', () => {
   });
 
   test('defaultUrl setting is readable and is a string', () => {
-    const cfg = vscode.workspace.getConfiguration('vscode-browser-tab');
+    const cfg = vscode.workspace.getConfiguration('vscode-visual-edit');
     const url = cfg.get<string>('defaultUrl');
     assert.ok(typeof url === 'string', 'defaultUrl should be a string');
     assert.ok(url.length > 0, 'defaultUrl should not be empty');
   });
 
   test('autoReload setting defaults to true', () => {
-    const cfg = vscode.workspace.getConfiguration('vscode-browser-tab');
+    const cfg = vscode.workspace.getConfiguration('vscode-visual-edit');
     assert.strictEqual(cfg.get<boolean>('autoReload', true), true);
   });
 
   test('hmrAware setting defaults to true', () => {
-    const cfg = vscode.workspace.getConfiguration('vscode-browser-tab');
+    const cfg = vscode.workspace.getConfiguration('vscode-visual-edit');
     assert.strictEqual(cfg.get<boolean>('hmrAware', true), true);
   });
 
   test('consoleOutput setting defaults to "all"', () => {
-    const cfg = vscode.workspace.getConfiguration('vscode-browser-tab');
+    const cfg = vscode.workspace.getConfiguration('vscode-visual-edit');
     assert.strictEqual(cfg.get<string>('consoleOutput', 'all'), 'all');
   });
 
   test('networkInspector setting defaults to true', () => {
-    const cfg = vscode.workspace.getConfiguration('vscode-browser-tab');
+    const cfg = vscode.workspace.getConfiguration('vscode-visual-edit');
     assert.strictEqual(cfg.get<boolean>('networkInspector', true), true);
   });
 });

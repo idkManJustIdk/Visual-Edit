@@ -7,7 +7,7 @@ export function handleConsole(
   msg: Record<string, any>,
   channel: vscode.LogOutputChannel,
 ) {
-  const minLevel = vscode.workspace.getConfiguration('vscode-browser-tab').get<string>('consoleOutput', 'all');
+  const minLevel = vscode.workspace.getConfiguration('vscode-visual-edit').get<string>('consoleOutput', 'all');
   if (minLevel === 'none') { return; }
 
   const level = (msg.level ?? 'log').toLowerCase() as string;

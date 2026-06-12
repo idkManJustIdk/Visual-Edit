@@ -51,6 +51,11 @@ function richMsg(overrides: Record<string, any> = {}) {
     text: 'Go',
     rect: { x: 10, y: 20, width: 80, height: 30 },
     parentSummary: 'form#login',
+    prevSibling: '<label> "Name"',
+    nextSibling: '<a.link> "Help"',
+    computed: { display: 'flex', padding: '8px 16px', color: 'rgb(0, 0, 0)' },
+    parentComputed: { display: 'flex', 'flex-direction': 'column', gap: '12px' },
+    viewport: { width: 1280, height: 720, dpr: 2 },
     pageUrl: 'http://localhost:3000/login',
     ...overrides,
   };
@@ -103,6 +108,18 @@ describe('handleInspectElement — Antigravity handoff', () => {
     expect(content).toContain('form#login');                  // parent summary
   });
 
+  it('renders the new template sections (styles, siblings, viewport)', async () => {
+    await handleInspectElement(richMsg());
+    const content: string = mockOpenTextDocument.mock.calls[0][0].content;
+    expect(content).toContain('## Layout/Styles');
+    expect(content).toContain('- display: flex');
+    expect(content).toContain('flex-direction: column');
+    expect(content).toContain('Viewport:');
+    expect(content).toContain('1280x720 (dpr 2)');
+    expect(content).toContain('Next sibling: <a.link>');
+    expect(content).toContain('Box: 80x30 at (10, 20)');
+  });
+
   it('prefers the realUrl argument over the page URL from the payload', async () => {
     await handleInspectElement(richMsg(), 'http://localhost:5173/real');
     const content: string = mockOpenTextDocument.mock.calls[0][0].content;
@@ -135,7 +152,7 @@ describe('handleInspectElement — minimal element', () => {
   it('handles an element with only a tag', async () => {
     await handleInspectElement({ tag: 'span' });
     const content: string = mockOpenTextDocument.mock.calls[0][0].content;
-    expect(content).toContain('`<span>`');
+    expect(content).toContain('- Tag: span');
     expect(mockExecuteCommand).toHaveBeenCalledWith(ANTIGRAVITY_CHAT_FOCUS);
   });
 });

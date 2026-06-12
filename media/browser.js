@@ -315,9 +315,9 @@
         }
       }, 800);
     }
-    let title = "Browser";
+    let title = "Visual Edit";
     try {
-      title = frame.contentDocument?.title || "Browser";
+      title = frame.contentDocument?.title || "Visual Edit";
     } catch {
     }
     vscode.postMessage({ type: "navigate", url: detectedUrl || state.history[state.historyIdx], title });

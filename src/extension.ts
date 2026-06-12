@@ -7,8 +7,8 @@ import { normalizeUrl } from "./utils/urlUtils";
 export async function activate(context: vscode.ExtensionContext) {
 
   // ── DevTools Output Channels ───────────────────────────────────────────────
-  const consoleChannel = vscode.window.createOutputChannel('Browser Tab — Console', { log: true });
-  const networkChannel = vscode.window.createOutputChannel('Browser Tab — Network');
+  const consoleChannel = vscode.window.createOutputChannel('Visual Edit — Console', { log: true });
+  const networkChannel = vscode.window.createOutputChannel('Visual Edit — Network');
   context.subscriptions.push(consoleChannel, networkChannel);
 
   // ── Local DevTools proxy (injects script into localhost HTML responses) ─────
@@ -18,21 +18,21 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push({ dispose: () => proxy?.dispose() });
   } catch (e) {
     // Proxy failed to start — DevTools features will be unavailable
-    console.warn('[Browser Tab] DevTools proxy failed to start:', e);
+    console.warn('[Visual Edit] DevTools proxy failed to start:', e);
   }
 
   BrowserPanel.init(consoleChannel, networkChannel, proxy);
 
-  // ── Command: Open Browser Tab ──────────────────────────────────────────────
+  // ── Command: Open Visual Edit ──────────────────────────────────────────────
   context.subscriptions.push(
-    vscode.commands.registerCommand("vscode-browser-tab.open", () => {
+    vscode.commands.registerCommand("vscode-visual-edit.open", () => {
       BrowserPanel.createOrShow(context);
     }),
   );
 
-  // ── Command: Open File in Browser Tab ──────────────────────────────────────
+  // ── Command: Open File in Visual Edit ──────────────────────────────────────
   context.subscriptions.push(
-    vscode.commands.registerCommand("vscode-browser-tab.openFile", (uri: vscode.Uri) => {
+    vscode.commands.registerCommand("vscode-visual-edit.openFile", (uri: vscode.Uri) => {
       if (uri) {
         BrowserPanel.createOrShow(context, uri.toString());
       }
@@ -41,10 +41,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // ── Command: Navigate to URL ───────────────────────────────────────────────
   context.subscriptions.push(
-    vscode.commands.registerCommand("vscode-browser-tab.navigate", async () => {
+    vscode.commands.registerCommand("vscode-visual-edit.navigate", async () => {
       const input = await vscode.window.showInputBox({
         title: "Navigate to URL",
-        prompt: "Enter a URL to open in the Browser Tab",
+        prompt: "Enter a URL to open in Visual Edit",
         placeHolder: "localhost:3000  or  https://example.com",
       });
       if (!input) { return; }
@@ -56,7 +56,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerTerminalLinkProvider({
       provideTerminalLinks(ctx, _token) {
-        const cfg = vscode.workspace.getConfiguration('vscode-browser-tab');
+        const cfg = vscode.workspace.getConfiguration('vscode-visual-edit');
         if (!cfg.get<boolean>('terminalLinks', true)) { return []; }
         const URL_REGEX = /https?:\/\/[^\s"'`\]>),;]+/g;
         const links: vscode.TerminalLink[] = [];
@@ -65,7 +65,7 @@ export async function activate(context: vscode.ExtensionContext) {
         while ((m = URL_REGEX.exec(ctx.line)) !== null) {
           links.push(
             Object.assign(
-              new (vscode.TerminalLink as any)(m.index, m[0].length, "Open in Browser Tab"),
+              new (vscode.TerminalLink as any)(m.index, m[0].length, "Open in Visual Edit"),
               { _url: m[0] },
             ),
           );

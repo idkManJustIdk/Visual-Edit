@@ -5,12 +5,12 @@ function ts(): string {
 }
 
 export function handleNetworkRequest(msg: Record<string, any>, channel: vscode.OutputChannel) {
-  if (!vscode.workspace.getConfiguration('vscode-browser-tab').get<boolean>('networkInspector', true)) { return; }
+  if (!vscode.workspace.getConfiguration('vscode-visual-edit').get<boolean>('networkInspector', true)) { return; }
   channel.appendLine(`${ts()} ▶ ${msg.method ?? 'GET'} ${msg.url}`);
 }
 
 export function handleNetworkResponse(msg: Record<string, any>, channel: vscode.OutputChannel) {
-  if (!vscode.workspace.getConfiguration('vscode-browser-tab').get<boolean>('networkInspector', true)) { return; }
+  if (!vscode.workspace.getConfiguration('vscode-visual-edit').get<boolean>('networkInspector', true)) { return; }
   const s: number = msg.status ?? 0;
   const icon = getStatusIcon(s);
   const statusText = s === 0 ? 'FAILED (aborted/CORS/network error)' : `${s} ${msg.statusText ?? ''}`;
