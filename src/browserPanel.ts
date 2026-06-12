@@ -108,7 +108,14 @@ export class BrowserPanel {
       __bt_console:          (m) => { if (BrowserPanel._consoleChannel) { handleConsole(m, BrowserPanel._consoleChannel); } },
       __bt_network_request:  (m) => { if (BrowserPanel._networkChannel) { handleNetworkRequest(m, BrowserPanel._networkChannel); } },
       __bt_network_response: (m) => { if (BrowserPanel._networkChannel) { handleNetworkResponse(m, BrowserPanel._networkChannel); } },
-      __bt_inspect_element:  (m) => handleInspectElement(m),
+      __bt_inspect_element:  (m) => handleInspectElement(
+        m,
+        this._currentUrl,
+        () => {
+          this._panel.reveal(this._panel.viewColumn, true);
+          setTimeout(() => vscode.commands.executeCommand("antigravity.agentSidePanel.focus"), 4);
+        },
+      ),
     };
 
     await handlers[msg.type]?.(msg);

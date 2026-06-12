@@ -1,140 +1,131 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ── Mock vscode — showQuickPick + showInformationMessage + executeCommand ──────
+// ── Mock vscode ───────────────────────────────────────────────────────────────
 
-const mockShowQuickPick        = vi.fn();
+const mockOpenTextDocument     = vi.fn();
+const mockShowTextDocument     = vi.fn();
 const mockShowInformationMessage = vi.fn();
 const mockExecuteCommand       = vi.fn();
+const mockClipboardWrite       = vi.fn();
+
+class Position { constructor(public line: number, public character: number) {} }
+class Selection { constructor(public anchor: any, public active: any) {} }
+class Range { constructor(public start: any, public end: any) {} }
 
 vi.mock('vscode', () => ({
+  Position,
+  Selection,
+  Range,
   window: {
-    showQuickPick:          mockShowQuickPick,
+    showTextDocument:       mockShowTextDocument,
     showInformationMessage: mockShowInformationMessage,
   },
-  commands: { executeCommand: mockExecuteCommand },
+  workspace: {
+    openTextDocument:       mockOpenTextDocument,
+  },
+  commands: {
+    executeCommand: mockExecuteCommand,
+  },
+  env: {
+    clipboard: { writeText: mockClipboardWrite },
+  },
 }));
 
 const { handleInspectElement } = await import('../../../src/utils/handlers/inspectHandler');
+const ANTIGRAVITY_CHAT_FOCUS = 'antigravity.toggleChatFocus';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function msg(tag: string, id: string, classes: string[]) {
-  return { tag, id, classes };
+function richMsg(overrides: Record<string, any> = {}) {
+  return {
+    tag: 'button',
+    id: 'submit',
+    classes: ['btn', 'btn-primary'],
+    attributes: { type: 'submit', 'data-testid': 'go' },
+    selector: 'form > button#submit',
+    outerHTML: '<button id="submit" class="btn btn-primary">Go</button>',
+    text: 'Go',
+    rect: { x: 10, y: 20, width: 80, height: 30 },
+    parentSummary: 'form#login',
+    pageUrl: 'http://localhost:3000/login',
+    ...overrides,
+  };
 }
+
+let lastEditor: any;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Default: user picks the first item
-  mockShowQuickPick.mockImplementation((items: any[]) => Promise.resolve(items[0]));
+  mockOpenTextDocument.mockImplementation(({ content }: { content: string }) =>
+    Promise.resolve({ positionAt: (n: number) => new Position(0, n), _content: content }),
+  );
+  lastEditor = { selection: undefined, revealRange: vi.fn() };
+  mockShowTextDocument.mockResolvedValue(lastEditor);
+  mockExecuteCommand.mockResolvedValue(undefined);
 });
 
-// ── Hash stripping ────────────────────────────────────────────────────────────
+// ── Happy path: hand off to Antigravity chat ──────────────────────────────────
 
-describe('handleInspectElement — class hash stripping', () => {
-  it('strips __name__hash (double-underscore wrapped)', async () => {
-    await handleInspectElement(msg('div', '', ['__container__fx12g3']));
-    const items: any[] = mockShowQuickPick.mock.calls[0][0];
-    expect(items[0].term).toBe('container');
-    expect(items[0].description).toBe('__container__fx12g3');
+describe('handleInspectElement — Antigravity handoff', () => {
+  it('stages context in an untitled markdown doc and selects it', async () => {
+    await handleInspectElement(richMsg());
+    expect(mockOpenTextDocument).toHaveBeenCalledOnce();
+    const arg = mockOpenTextDocument.mock.calls[0][0];
+    expect(arg.language).toBe('markdown');
+    expect(lastEditor.selection).toBeInstanceOf(Selection);
+    expect(lastEditor.revealRange).toHaveBeenCalledOnce();
   });
 
-  it('strips name__hash (CSS Modules)', async () => {
-    await handleInspectElement(msg('div', '', ['container__2xK9b']));
-    const items: any[] = mockShowQuickPick.mock.calls[0][0];
-    expect(items[0].term).toBe('container');
+  it('invokes the Ctrl+L chat command and skips the clipboard', async () => {
+    await handleInspectElement(richMsg());
+    expect(mockExecuteCommand).toHaveBeenCalledWith(ANTIGRAVITY_CHAT_FOCUS);
+    expect(mockClipboardWrite).not.toHaveBeenCalled();
+    expect(mockShowInformationMessage).not.toHaveBeenCalled();
   });
 
-  it('strips name_hash_counter (CSS Modules with counter)', async () => {
-    await handleInspectElement(msg('div', '', ['container_qgp7o_1']));
-    const items: any[] = mockShowQuickPick.mock.calls[0][0];
-    expect(items[0].term).toBe('container');
+  it('includes rich context (selector, attributes, outer HTML, url) in the staged doc', async () => {
+    await handleInspectElement(richMsg());
+    const content: string = mockOpenTextDocument.mock.calls[0][0].content;
+    expect(content).toContain('form > button#submit');       // selector
+    expect(content).toContain('`type` = `submit`');           // attribute
+    expect(content).toContain('```html');                     // outer HTML fence
+    expect(content).toContain('http://localhost:3000/login'); // url
+    expect(content).toContain('form#login');                  // parent summary
   });
 
-  it('leaves semantic names unchanged (no digit mix)', async () => {
-    await handleInspectElement(msg('div', '', ['container_primary']));
-    const items: any[] = mockShowQuickPick.mock.calls[0][0];
-    expect(items[0].term).toBe('container_primary');
-    expect(items[0].description).toBeUndefined();
-  });
-
-  it('leaves plain class names unchanged', async () => {
-    await handleInspectElement(msg('div', '', ['navbar']));
-    const items: any[] = mockShowQuickPick.mock.calls[0][0];
-    expect(items[0].term).toBe('navbar');
-  });
-
-  it('strips name--hash (double-dash variant)', async () => {
-    await handleInspectElement(msg('div', '', ['button--abc1de2']));
-    const items: any[] = mockShowQuickPick.mock.calls[0][0];
-    expect(items[0].term).toBe('button');
-    expect(items[0].description).toBe('button--abc1de2');
-  });
-});
-
-// ── Framework class filtering ─────────────────────────────────────────────────
-
-describe('handleInspectElement — framework class filtering', () => {
-  it('filters Angular _ngcontent- classes to bottom with warning label', async () => {
-    await handleInspectElement(msg('div', '', ['myClass', '_ngcontent-xyz-c100']));
-    const items: any[] = mockShowQuickPick.mock.calls[0][0];
-    const sourceItem = items.find((i: any) => i.term === 'myClass');
-    const ngItem     = items.find((i: any) => i.term === '_ngcontent-xyz-c100');
-    expect(sourceItem).toBeDefined();
-    expect(ngItem?.label).toMatch(/\$\(warning\)/);
-    expect(ngItem?.description).toMatch(/framework-generated/);
-    // Source class must come before framework class
-    expect(items.indexOf(sourceItem)).toBeLessThan(items.indexOf(ngItem));
-  });
-
-  it('filters Angular ng-star-inserted', async () => {
-    await handleInspectElement(msg('div', '', ['ng-star-inserted']));
-    const items: any[] = mockShowQuickPick.mock.calls[0][0];
-    expect(items[0].description).toMatch(/framework-generated/);
-  });
-
-  it('filters cdk- classes', async () => {
-    await handleInspectElement(msg('div', '', ['cdk-overlay-container']));
-    const items: any[] = mockShowQuickPick.mock.calls[0][0];
-    expect(items[0].description).toMatch(/framework-generated/);
+  it('prefers the realUrl argument over the page URL from the payload', async () => {
+    await handleInspectElement(richMsg(), 'http://localhost:5173/real');
+    const content: string = mockOpenTextDocument.mock.calls[0][0].content;
+    expect(content).toContain('http://localhost:5173/real');
+    expect(content).not.toContain('http://localhost:3000/login');
   });
 });
 
-// ── ID search ─────────────────────────────────────────────────────────────────
+// ── Fallback: command unavailable / throws ────────────────────────────────────
 
-describe('handleInspectElement — ID', () => {
-  it('puts ID search at the top', async () => {
-    await handleInspectElement(msg('div', 'myId', ['someClass']));
-    const items: any[] = mockShowQuickPick.mock.calls[0][0];
-    expect(items[0].term).toBe('myId');
-    expect(items[0].label).toMatch(/#myId/);
-  });
-});
-
-// ── Empty element ─────────────────────────────────────────────────────────────
-
-describe('handleInspectElement — no selectors', () => {
-  it('shows an info message when there is nothing to search for', async () => {
-    await handleInspectElement(msg('div', '', []));
+describe('handleInspectElement — clipboard fallback', () => {
+  it('falls back to clipboard when the chat command throws', async () => {
+    mockExecuteCommand.mockRejectedValue(new Error('command not found'));
+    await handleInspectElement(richMsg());
+    expect(mockClipboardWrite).toHaveBeenCalledOnce();
     expect(mockShowInformationMessage).toHaveBeenCalledOnce();
-    expect(mockShowQuickPick).not.toHaveBeenCalled();
+  });
+
+  it('still copies to clipboard when staging the doc fails', async () => {
+    mockOpenTextDocument.mockRejectedValue(new Error('no editor'));
+    await handleInspectElement(richMsg());
+    expect(mockExecuteCommand).not.toHaveBeenCalled(); // never staged a selection
+    expect(mockClipboardWrite).toHaveBeenCalledOnce();
   });
 });
 
-// ── Search trigger ────────────────────────────────────────────────────────────
+// ── Sparse element ────────────────────────────────────────────────────────────
 
-describe('handleInspectElement — search execution', () => {
-  it('calls findInFiles with the picked term', async () => {
-    mockShowQuickPick.mockResolvedValue({ label: '...', term: 'container' });
-    await handleInspectElement(msg('div', '', ['container__abc123']));
-    expect(mockExecuteCommand).toHaveBeenCalledWith(
-      'workbench.action.findInFiles',
-      { query: 'container', triggerSearch: true },
-    );
-  });
-
-  it('does not call findInFiles if quick-pick is cancelled', async () => {
-    mockShowQuickPick.mockResolvedValue(undefined);
-    await handleInspectElement(msg('div', '', ['myClass']));
-    expect(mockExecuteCommand).not.toHaveBeenCalled();
+describe('handleInspectElement — minimal element', () => {
+  it('handles an element with only a tag', async () => {
+    await handleInspectElement({ tag: 'span' });
+    const content: string = mockOpenTextDocument.mock.calls[0][0].content;
+    expect(content).toContain('`<span>`');
+    expect(mockExecuteCommand).toHaveBeenCalledWith(ANTIGRAVITY_CHAT_FOCUS);
   });
 });

@@ -1,70 +1,90 @@
 import * as vscode from 'vscode';
 
-/** Framework-generated class patterns that won't exist in user source code. */
-const FRAMEWORK_CLASS_PATTERNS = [
-  /^_ng(?:host|content)-/,
-  /^ng-(?:star|scope|binding|isolate|pristine|dirty|valid|invalid|touched|untouched)/,
-  /^cdk-/,
-  /^mat-mdc-/,
-  /^v-b-/,
-];
-
 /**
- * Strips bundler/CSS-Modules hash suffixes to recover the original source class name.
- *
- * Examples:
- *   container_qgp7o_1   → container   (hash + counter)
- *   __container__fx12g3 → container   (double-underscore wrapped)
- *   container__2xK9b    → container   (CSS Modules)
- *   container_primary   → unchanged   (semantic word, no digit mix)
+ * The Antigravity command bound to Ctrl+L ("Open Chat with Agent"). It opens the
+ * agent chat and picks up the active editor's selection as context — so staging
+ * our element context as a selection makes it land in the chat as a mention.
  */
-function stripHash(cls: string): string {
-  let s = cls.replace(/^_+/, '');
-  s = s.replace(
-    /(?:_+|-{2,})[a-zA-Z0-9]*(?:[a-zA-Z][0-9]|[0-9][a-zA-Z])[a-zA-Z0-9]*(?:_\d+)?$/,
-    '',
-  );
-  return (s && s !== cls) ? s : cls;
+const ANTIGRAVITY_CHAT_FOCUS = 'antigravity.toggleChatFocus';
+
+/** Builds a human + AI friendly markdown block describing the clicked element. */
+function formatElementContext(msg: Record<string, any>, realUrl?: string): string {
+  const tag: string                 = msg.tag ?? 'unknown';
+  const id: string                  = msg.id ?? '';
+  const classes: string[]           = Array.isArray(msg.classes) ? msg.classes : [];
+  const attributes: Record<string, string> = msg.attributes ?? {};
+  const selector: string            = msg.selector ?? '';
+  const outerHTML: string           = msg.outerHTML ?? '';
+  const text: string                = msg.text ?? '';
+  const rect = msg.rect ?? {};
+  const parentSummary: string       = msg.parentSummary ?? '';
+  const url = realUrl || msg.pageUrl || '';
+
+  const attrLines = Object.entries(attributes)
+    .map(([k, v]) => `- \`${k}\`${v ? ` = \`${v}\`` : ''}`)
+    .join('\n');
+
+  const lines = [
+    `I clicked this element in the browser preview. Here is its context — please help me with it:`,
+    ``,
+    `**Element:** \`<${tag}${id ? `#${id}` : ''}${classes.length ? `.${classes.join('.')}` : ''}>\``,
+    selector ? `**CSS selector:** \`${selector}\`` : '',
+    parentSummary ? `**Parent:** \`${parentSummary}\`` : '',
+    url ? `**Page URL:** ${url}` : '',
+    (rect.width || rect.height) ? `**Position/size:** ${rect.width}×${rect.height} at (${rect.x}, ${rect.y})` : '',
+    text ? `\n**Visible text:**\n> ${text}` : '',
+    attrLines ? `\n**Attributes:**\n${attrLines}` : '',
+    outerHTML ? `\n**Outer HTML:**\n\`\`\`html\n${outerHTML}\n\`\`\`` : '',
+  ].filter(Boolean);
+
+  return lines.join('\n');
 }
 
-export async function handleInspectElement(msg: Record<string, any>) {
-  const tag: string       = msg.tag ?? 'unknown';
-  const id: string        = msg.id ?? '';
-  const classes: string[] = msg.classes ?? [];
+/**
+ * Sends the clicked element's context to the Antigravity AI chat.
+ *
+ * Stages the context in an untitled markdown document, selects all of it, focuses
+ * it (the chat command reads the focused editor's selection), then invokes the
+ * Ctrl+L command. Once the chat has the context, `restoreFocus` is called to send
+ * focus back to the browser panel so the user isn't left on the temp document.
+ * Falls back to the clipboard if the command isn't available.
+ */
+export async function handleInspectElement(
+  msg: Record<string, any>,
+  realUrl?: string,
+  restoreFocus?: () => void,
+) {
+  const context = formatElementContext(msg, realUrl);
 
-  const isFramework = (c: string) => FRAMEWORK_CLASS_PATTERNS.some(r => r.test(c));
-  const sourceClasses = classes.filter(c => !isFramework(c));
+  let lastError: unknown;
+  try {
+    const doc = await vscode.workspace.openTextDocument({ content: context, language: 'markdown' });
+    const editor = await vscode.window.showTextDocument(doc, { preview: true, preserveFocus: false });
 
-  const terms: { label: string; term: string; description?: string }[] = [];
+    const start = new vscode.Position(0, 0);
+    const end = doc.positionAt(context.length);
+    editor.selection = new vscode.Selection(start, end);
+    editor.revealRange(new vscode.Range(start, end));
 
-  if (id) {
-    terms.push({ label: `$(search) Search for #${id}`, term: id });
-  }
+    // Let the editor focus + selection settle before invoking the command.
+    await new Promise((resolve) => setTimeout(resolve, 1));
 
-  for (const cls of sourceClasses) {
-    const clean = stripHash(cls);
-    terms.push(
-      clean !== cls
-        ? { label: `$(search) Search for .${clean}`, term: clean, description: cls }
-        : { label: `$(search) Search for .${cls}`,   term: cls },
-    );
-  }
+    await vscode.commands.executeCommand(ANTIGRAVITY_CHAT_FOCUS);
 
-  for (const cls of classes.filter(isFramework)) {
-    terms.push({ label: `$(warning) ${cls}`, term: cls, description: 'framework-generated, unlikely in source' });
-  }
-
-  if (terms.length === 0) {
-    vscode.window.showInformationMessage(`Inspected <${tag}> — no class or ID to search for.`);
+    // Chat now has the context — return focus to the browser panel so the user
+    // isn't stranded on the temp document.
+    if (restoreFocus) {
+      setTimeout(() => { try { restoreFocus(); } catch { /* ignore */ } }, 60);
+    }
     return;
+  } catch (err) {
+    lastError = err;
   }
 
-  const picked = await vscode.window.showQuickPick(terms, {
-    title: `Inspect: <${tag}${id ? '#' + id : ''}>`,
-    placeHolder: 'Select to find in workspace files',
-  });
-
-  if (picked?.term) {
-    vscode.commands.executeCommand('workbench.action.findInFiles', { query: picked.term, triggerSearch: true });
-  }
+  // Fallback — keep the context on the clipboard and report why the auto-open failed.
+  await vscode.env.clipboard.writeText(context);
+  const detail = lastError instanceof Error && lastError.message ? ` (reason: ${lastError.message})` : '';
+  vscode.window.showInformationMessage(
+    `Element context copied to clipboard — open the Antigravity chat and paste it (Ctrl+V).${detail}`,
+  );
 }
