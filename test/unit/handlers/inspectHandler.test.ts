@@ -11,17 +11,21 @@ const mockClipboardWrite       = vi.fn();
 class Position { constructor(public line: number, public character: number) {} }
 class Selection { constructor(public anchor: any, public active: any) {} }
 class Range { constructor(public start: any, public end: any) {} }
+class WorkspaceEdit { delete = vi.fn(); }
 
 vi.mock('vscode', () => ({
   Position,
   Selection,
   Range,
+  WorkspaceEdit,
   window: {
     showTextDocument:       mockShowTextDocument,
     showInformationMessage: mockShowInformationMessage,
+    tabGroups: { all: [] },
   },
   workspace: {
     openTextDocument:       mockOpenTextDocument,
+    applyEdit:              vi.fn().mockResolvedValue(true),
   },
   commands: {
     executeCommand: mockExecuteCommand,
@@ -57,7 +61,7 @@ let lastEditor: any;
 beforeEach(() => {
   vi.clearAllMocks();
   mockOpenTextDocument.mockImplementation(({ content }: { content: string }) =>
-    Promise.resolve({ positionAt: (n: number) => new Position(0, n), _content: content }),
+    Promise.resolve({ positionAt: (n: number) => new Position(0, n), getText: () => content, uri: { toString: () => "untitled:1" }, _content: content }),
   );
   lastEditor = { selection: undefined, revealRange: vi.fn() };
   mockShowTextDocument.mockResolvedValue(lastEditor);
@@ -81,6 +85,12 @@ describe('handleInspectElement — Antigravity handoff', () => {
     expect(mockExecuteCommand).toHaveBeenCalledWith(ANTIGRAVITY_CHAT_FOCUS);
     expect(mockClipboardWrite).not.toHaveBeenCalled();
     expect(mockShowInformationMessage).not.toHaveBeenCalled();
+  });
+
+  it('calls restoreFocus after handing off, to cover the temp doc', async () => {
+    const restoreFocus = vi.fn();
+    await handleInspectElement(richMsg(), undefined, restoreFocus);
+    expect(restoreFocus).toHaveBeenCalledOnce();
   });
 
   it('includes rich context (selector, attributes, outer HTML, url) in the staged doc', async () => {

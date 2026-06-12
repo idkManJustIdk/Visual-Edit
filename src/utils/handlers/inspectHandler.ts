@@ -3,7 +3,8 @@ import * as vscode from 'vscode';
 /**
  * The Antigravity command bound to Ctrl+L ("Open Chat with Agent"). It opens the
  * agent chat and picks up the active editor's selection as context — so staging
- * our element context as a selection makes it land in the chat as a mention.
+ * our element context as a selection makes it land in the chat as a mention,
+ * without the agent auto-running anything.
  */
 const ANTIGRAVITY_CHAT_FOCUS = 'antigravity.toggleChatFocus';
 
@@ -40,13 +41,33 @@ function formatElementContext(msg: Record<string, any>, realUrl?: string): strin
   return lines.join('\n');
 }
 
+/** Clears and closes the staged untitled doc without a "save?" prompt. */
+async function closeTempDoc(doc: vscode.TextDocument): Promise<void> {
+  try {
+    // Empty the buffer first — an empty untitled doc closes silently (no save prompt).
+    const full = new vscode.Range(new vscode.Position(0, 0), doc.positionAt(doc.getText().length));
+    const edit = new vscode.WorkspaceEdit();
+    edit.delete(doc.uri, full);
+    await vscode.workspace.applyEdit(edit);
+
+    for (const group of vscode.window.tabGroups.all) {
+      for (const tab of group.tabs) {
+        const input: any = tab.input;
+        if (input?.uri && input.uri.toString() === doc.uri.toString()) {
+          await vscode.window.tabGroups.close(tab);
+        }
+      }
+    }
+  } catch { /* best effort — ignore */ }
+}
+
 /**
  * Sends the clicked element's context to the Antigravity AI chat.
  *
- * Stages the context in an untitled markdown document, selects all of it, focuses
+ * Stages the context in an untitled preview document, selects all of it, focuses
  * it (the chat command reads the focused editor's selection), then invokes the
- * Ctrl+L command. Once the chat has the context, `restoreFocus` is called to send
- * focus back to the browser panel so the user isn't left on the temp document.
+ * Ctrl+L command. Immediately after, `restoreFocus` covers the temp document with
+ * the browser and focuses the chat input; 10ms later the temp doc is closed.
  * Falls back to the clipboard if the command isn't available.
  */
 export async function handleInspectElement(
@@ -71,11 +92,11 @@ export async function handleInspectElement(
 
     await vscode.commands.executeCommand(ANTIGRAVITY_CHAT_FOCUS);
 
-    // Chat now has the context — return focus to the browser panel so the user
-    // isn't stranded on the temp document.
-    if (restoreFocus) {
-      setTimeout(() => { try { restoreFocus(); } catch { /* ignore */ } }, 60);
-    }
+    // Cover the temp document with the browser and focus the chat input right away.
+    restoreFocus?.();
+
+    // Clean up the temp document shortly after the handoff.
+    setTimeout(() => { void closeTempDoc(doc); }, 10);
     return;
   } catch (err) {
     lastError = err;
